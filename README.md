@@ -15,10 +15,11 @@
 
 ![vue-spa-demo](http://7jpswm.com1.z0.glb.clouddn.com/vue-spavue-spa-demo-3.gif)
 
->安装方法
+>安装&使用方法
 
-1. npm install
-2. gulp or gulp watch
+1. 直接使用:build文件夹及index.html即可为打包好的
+2. npm install
+3. gulp or gulp watch
 
 >最好安装好webpack 虽然这里是用gulp结合的
 
