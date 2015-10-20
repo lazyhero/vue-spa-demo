@@ -1,5 +1,5 @@
 {
-  "name": "vue-spa",
+  "name": "vue-spa-demo",
   "version": "1.0.0",
   "description": "seed-project-by vue",
   "main": "index.js",
@@ -19,6 +19,7 @@
     "webpack": "^1.12.2"
   },
   "dependencies": {
-    "vue-loader": "^3.0.4"
+    "vue": "^1.0.0-rc.1",
+    "vue-router": "^0.7.2"
   }
 }

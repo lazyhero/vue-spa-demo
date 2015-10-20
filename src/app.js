@@ -2,6 +2,7 @@
 // pre-process and insert css directly with require().
 // See webpack.config.js for details.
 var Vue = require('vue')
+var VueRouter = require('vue-router');
 Vue.use(VueRouter);
 
 var app = Vue.extend(require('./app.vue'))
