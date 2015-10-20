@@ -10547,6 +10547,7 @@
 	    this._currentTransition = null;
 	    this._previousTransition = null;
 	    this._notFoundHandler = null;
+	    this._notFoundRedirect = null;
 	    this._beforeEachHooks = [];
 	    this._afterEachHooks = [];
 	
@@ -10794,7 +10795,11 @@
 	   */
 	
 	  Router.prototype._addRedirect = function _addRedirect(path, redirectPath) {
-	    this._addGuard(path, redirectPath, this.replace);
+	    if (path === '*') {
+	      this._notFoundRedirect = redirectPath;
+	    } else {
+	      this._addGuard(path, redirectPath, this.replace);
+	    }
 	  };
 	
 	  /**
@@ -10840,6 +10845,12 @@
 	    if (matched) {
 	      matched[0].handler(matched[0], matched.queryParams);
 	      return true;
+	    } else if (this._notFoundRedirect) {
+	      matched = this._recognizer.recognize(path);
+	      if (!matched) {
+	        this.replace(this._notFoundRedirect);
+	        return true;
+	      }
 	    }
 	  };
 	
@@ -13697,7 +13708,7 @@
 /* 116 */
 /***/ function(module, exports) {
 
-	module.exports = "<div class=\"page page-current\">\r\n\r\n        <nav class=\"bar bar-tab\" v-if=\"isIndex\" >\r\n            <a class=\"tab-item\" external v-link=\"{ path: '/A',activeClass: 'active'}\">\r\n                <span class=\"icon icon-home\"></span>\r\n                <span class=\"tab-label\">ViewA</span>\r\n            </a>\r\n            <a class=\"tab-item\" external v-link=\"{ path: '/B',activeClass: 'active' }\">\r\n                <span class=\"icon icon-gift\"></span>\r\n                <span class=\"tab-label\">ViewB</span>\r\n            </a>\r\n            <a class=\"tab-item\" external  v-link=\"{ path: '/C',activeClass: 'active' }\">\r\n                <span class=\"icon icon-app\"></span>\r\n                <span class=\"tab-label\">ViewC</span>\r\n            </a>\r\n            <a class=\"tab-item\" external v-link=\"{ path: '/D',activeClass: 'active' }\">\r\n                <span class=\"icon icon-me\"></span>\r\n                <span class=\"tab-label\">ViewD</span>\r\n            </a>\r\n        </nav>\r\n            <router-view keep-alive></router-view>\r\n    </div>";
+	module.exports = "<div class=\"page page-current\">\n\n        <nav class=\"bar bar-tab\" v-if=\"isIndex\" >\n            <a class=\"tab-item\" external v-link=\"{ path: '/A',activeClass: 'active'}\">\n                <span class=\"icon icon-home\"></span>\n                <span class=\"tab-label\">ViewA</span>\n            </a>\n            <a class=\"tab-item\" external v-link=\"{ path: '/B',activeClass: 'active' }\">\n                <span class=\"icon icon-gift\"></span>\n                <span class=\"tab-label\">ViewB</span>\n            </a>\n            <a class=\"tab-item\" external  v-link=\"{ path: '/C',activeClass: 'active' }\">\n                <span class=\"icon icon-app\"></span>\n                <span class=\"tab-label\">ViewC</span>\n            </a>\n            <a class=\"tab-item\" external v-link=\"{ path: '/D',activeClass: 'active' }\">\n                <span class=\"icon icon-me\"></span>\n                <span class=\"tab-label\">ViewD</span>\n            </a>\n        </nav>\n            <router-view keep-alive></router-view>\n    </div>";
 
 /***/ },
 /* 117 */
@@ -13766,7 +13777,7 @@
 /* 121 */
 /***/ function(module, exports) {
 
-	module.exports = "<div id=\"A\" class=\"content\">\r\n        This is Page-A\r\n\r\n    </div>";
+	module.exports = "<div id=\"A\" class=\"content\">\n        This is Page-A\n\n    </div>";
 
 /***/ },
 /* 122 */
@@ -13846,7 +13857,7 @@
 /* 126 */
 /***/ function(module, exports) {
 
-	module.exports = "<div id=\"gift\" class=\"content\">\r\n\r\n        <div class=\"row no-gutter\">\r\n            <a v-for=\"record in records\"  class=\"col-50\" v-link=\"{ name: 'B_A', params: { recordId: record.id }}\" v-bind:class=\"{'list-item__left':($index%2==0?true:false),'list-item__right':($index%2==0?false:true)}\">\r\n                <div class=\"content-padded list-item__info\">\r\n                    <p class=\"mod_state\"><span>{{record.supplier}}</span><span vs-if=\"!record.isHave\" class=\"state state_grey\">抢光了</span></p>\r\n                    <p>{{record.title}}</p>\r\n                    <p>{{record.per_count}}<span class=\"per_count\"></span></p>\r\n                </div>\r\n                <div class=\"no-gutter\">\r\n                    <img class=\"mod_img\" v-bind:src=\"record.pic\" alt=\"\">\r\n                </div>\r\n            </a>\r\n        </div>\r\n    </div>\r\n    <router-view>\r\n    </router-view>";
+	module.exports = "<div id=\"gift\" class=\"content\">\n\n        <div class=\"row no-gutter\">\n            <a v-for=\"record in records\"  class=\"col-50\" v-link=\"{ name: 'B_A', params: { recordId: record.id }}\" v-bind:class=\"{'list-item__left':($index%2==0?true:false),'list-item__right':($index%2==0?false:true)}\">\n                <div class=\"content-padded list-item__info\">\n                    <p class=\"mod_state\"><span>{{record.supplier}}</span><span vs-if=\"!record.isHave\" class=\"state state_grey\">抢光了</span></p>\n                    <p>{{record.title}}</p>\n                    <p>{{record.per_count}}<span class=\"per_count\"></span></p>\n                </div>\n                <div class=\"no-gutter\">\n                    <img class=\"mod_img\" v-bind:src=\"record.pic\" alt=\"\">\n                </div>\n            </a>\n        </div>\n    </div>\n    <router-view>\n    </router-view>";
 
 /***/ },
 /* 127 */
@@ -13949,7 +13960,7 @@
 /* 131 */
 /***/ function(module, exports) {
 
-	module.exports = "<!--B_A详情页仿滴滴出行积分商城-->\r\n    <div class=\"page page-current\" >\r\n        <div class=\"content detail_content\">\r\n            <div class=\"row no-gutter\">\r\n                <div class=\"col-100 img_head\">\r\n                    <img class=\"gift-cover\" src=\"{{B.bigPic}}\">\r\n                    <div class=\"gradients\">\r\n                        <p id=\"merchant_name\">{{B.merchant_name}}</p>\r\n                        <p id=\"name\">{{B.name}}</p>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n            <div class=\"row no-gutter describe\" v-bind:class=\"{fixTop:isFixDesc}\">\r\n                <div class=\"col-50 \">\r\n                    <span id=\"goods_count\">{{B.pre_count}}</span>\r\n                </div>\r\n                <div class=\"col-50 \">\r\n                    <a v-if=\"!isGet\" href=\"javascript:void(0)\" v-on:click=\"pay(B.id)\" class=\"btn-org\">立即兑换</a>\r\n                    <div v-if=\"isGet\" class=\"btn-gray\">已兑换</div>\r\n                </div>\r\n            </div>\r\n            <div class=\"main\" id=\"main\">\r\n                <div v-html=\"B.content\"></div>\r\n            </div>\r\n            <div class=\"row no-gutter\">\r\n                <div class=\"col-100\" style=\"background-color: #ffffff\">\r\n                    <div class=\"border\">\r\n                        <div class=\"declare\">\r\n                            <p>重要说明</p>\r\n                            <div class=\"declare_cont\" id=\"declare\">\r\n                                底部说明\r\n                            </div>\r\n                        </div>\r\n                    </div>\r\n                </div>\r\n            </div>\r\n\r\n\r\n        </div>\r\n    </div>";
+	module.exports = "<!--B_A详情页仿滴滴出行积分商城-->\n    <div class=\"page page-current\" >\n        <div class=\"content detail_content\">\n            <div class=\"row no-gutter\">\n                <div class=\"col-100 img_head\">\n                    <img class=\"gift-cover\" src=\"{{B.bigPic}}\">\n                    <div class=\"gradients\">\n                        <p id=\"merchant_name\">{{B.merchant_name}}</p>\n                        <p id=\"name\">{{B.name}}</p>\n                    </div>\n                </div>\n            </div>\n            <div class=\"row no-gutter describe\" v-bind:class=\"{fixTop:isFixDesc}\">\n                <div class=\"col-50 \">\n                    <span id=\"goods_count\">{{B.pre_count}}</span>\n                </div>\n                <div class=\"col-50 \">\n                    <a v-if=\"!isGet\" href=\"javascript:void(0)\" v-on:click=\"pay(B.id)\" class=\"btn-org\">立即兑换</a>\n                    <div v-if=\"isGet\" class=\"btn-gray\">已兑换</div>\n                </div>\n            </div>\n            <div class=\"main\" id=\"main\">\n                <div v-html=\"B.content\"></div>\n            </div>\n            <div class=\"row no-gutter\">\n                <div class=\"col-100\" style=\"background-color: #ffffff\">\n                    <div class=\"border\">\n                        <div class=\"declare\">\n                            <p>重要说明</p>\n                            <div class=\"declare_cont\" id=\"declare\">\n                                底部说明\n                            </div>\n                        </div>\n                    </div>\n                </div>\n            </div>\n\n\n        </div>\n    </div>";
 
 /***/ },
 /* 132 */
@@ -13979,7 +13990,7 @@
 /* 134 */
 /***/ function(module, exports) {
 
-	module.exports = "<div  id=\"C\" class=\"content\">\r\n        <div class=\"content-block C\">\r\n            This is Page-C\r\n        </div>\r\n    </div>";
+	module.exports = "<div  id=\"C\" class=\"content\">\n        <div class=\"content-block C\">\n            This is Page-C\n        </div>\n    </div>";
 
 /***/ },
 /* 135 */
@@ -14012,7 +14023,7 @@
 /* 137 */
 /***/ function(module, exports) {
 
-	module.exports = "<div id=\"D\">\r\n        <div class=\"list-block\">\r\n            <ul>\r\n                <li>\r\n                    <a v-link=\"{ path: '/D/D_A'}\" external class=\"item-link item-content\">\r\n                        <div class=\"item-media\"><i class=\"icon icon-gift\"></i></div>\r\n                        <div class=\"item-inner\">\r\n                            <div class=\"item-title\">D-A</div>\r\n                        </div>\r\n                    </a>\r\n                </li>\r\n            </ul>\r\n        </div>\r\n    </div>\r\n    <router-view>\r\n    </router-view>";
+	module.exports = "<div id=\"D\">\n        <div class=\"list-block\">\n            <ul>\n                <li>\n                    <a v-link=\"{ path: '/D/D_A'}\" external class=\"item-link item-content\">\n                        <div class=\"item-media\"><i class=\"icon icon-gift\"></i></div>\n                        <div class=\"item-inner\">\n                            <div class=\"item-title\">点击切换到D-A</div>\n                        </div>\n                    </a>\n                </li>\n            </ul>\n        </div>\n    </div>\n    <router-view>\n    </router-view>";
 
 /***/ },
 /* 138 */
@@ -14040,7 +14051,7 @@
 /* 140 */
 /***/ function(module, exports) {
 
-	module.exports = "<div id=\"D_A\" transition=\"page\" class=\"page page-current\">\r\n        <header class=\"bar bar-nav\">\r\n            <a class=\"button button-link button-nav pull-left back\"  v-link=\"{path:'/D'}\">\r\n                <span class=\"icon icon-left\"></span>\r\n                返回\r\n            </a>\r\n            <h1 class=\"title\">D_A-Page</h1>\r\n        </header>\r\n        <div class=\"content\">\r\n\r\n            This is Page-D_A\r\n\r\n        </div>\r\n    </div>";
+	module.exports = "<div id=\"D_A\" transition=\"page\" class=\"page page-current\">\n        <header class=\"bar bar-nav\">\n            <a class=\"button button-link button-nav pull-left back\"  v-link=\"{path:'/D'}\">\n                <span class=\"icon icon-left\"></span>\n                返回\n            </a>\n            <h1 class=\"title\">D_A-Page</h1>\n        </header>\n        <div class=\"content\">\n\n            This is Page-D_A\n            </br>\n            <a v-link=\"{path:'/B'}\"><span class=\"shop\">跳转到B</span></a>\n\n        </div>\n    </div>";
 
 /***/ }
 /******/ ]);
