@@ -1,3 +1,4 @@
 *.xml
-.idea/.name
 *.iml
+node_modules/
+.idea/

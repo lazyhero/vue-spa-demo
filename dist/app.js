@@ -120,6 +120,11 @@
 	
 	// 启动路由 顶层实例APP挂载到id为app的dom上
 	router.start(app, '#app');
+	
+	//暴漏vue和router
+	window.router = router;
+	window.vue = Vue;
+	console.info("暴漏vue和router---可进行调试");
 
 /***/ },
 /* 9 */
@@ -10547,6 +10552,7 @@
 	    this._currentTransition = null;
 	    this._previousTransition = null;
 	    this._notFoundHandler = null;
+	    this._notFoundRedirect = null;
 	    this._beforeEachHooks = [];
 	    this._afterEachHooks = [];
 	
@@ -10794,7 +10800,11 @@
 	   */
 	
 	  Router.prototype._addRedirect = function _addRedirect(path, redirectPath) {
-	    this._addGuard(path, redirectPath, this.replace);
+	    if (path === '*') {
+	      this._notFoundRedirect = redirectPath;
+	    } else {
+	      this._addGuard(path, redirectPath, this.replace);
+	    }
 	  };
 	
 	  /**
@@ -10840,6 +10850,12 @@
 	    if (matched) {
 	      matched[0].handler(matched[0], matched.queryParams);
 	      return true;
+	    } else if (this._notFoundRedirect) {
+	      matched = this._recognizer.recognize(path);
+	      if (!matched) {
+	        this.replace(this._notFoundRedirect);
+	        return true;
+	      }
 	    }
 	  };
 	
@@ -14012,7 +14028,7 @@
 /* 137 */
 /***/ function(module, exports) {
 
-	module.exports = "<div id=\"D\">\r\n        <div class=\"list-block\">\r\n            <ul>\r\n                <li>\r\n                    <a v-link=\"{ path: '/D/D_A'}\" external class=\"item-link item-content\">\r\n                        <div class=\"item-media\"><i class=\"icon icon-gift\"></i></div>\r\n                        <div class=\"item-inner\">\r\n                            <div class=\"item-title\">D-A</div>\r\n                        </div>\r\n                    </a>\r\n                </li>\r\n            </ul>\r\n        </div>\r\n    </div>\r\n    <router-view>\r\n    </router-view>";
+	module.exports = "<div id=\"D\">\r\n        <div class=\"list-block\">\r\n            <ul>\r\n                <li>\r\n                    <a v-link=\"{ path: '/D/D_A'}\" external class=\"item-link item-content\">\r\n                        <div class=\"item-media\"><i class=\"icon icon-gift\"></i></div>\r\n                        <div class=\"item-inner\">\r\n                            <div class=\"item-title\">点击切换到D-A</div>\r\n                        </div>\r\n                    </a>\r\n                </li>\r\n            </ul>\r\n        </div>\r\n    </div>\r\n    <router-view>\r\n    </router-view>";
 
 /***/ },
 /* 138 */
@@ -14040,7 +14056,7 @@
 /* 140 */
 /***/ function(module, exports) {
 
-	module.exports = "<div id=\"D_A\" transition=\"page\" class=\"page page-current\">\r\n        <header class=\"bar bar-nav\">\r\n            <a class=\"button button-link button-nav pull-left back\"  v-link=\"{path:'/D'}\">\r\n                <span class=\"icon icon-left\"></span>\r\n                返回\r\n            </a>\r\n            <h1 class=\"title\">D_A-Page</h1>\r\n        </header>\r\n        <div class=\"content\">\r\n\r\n            This is Page-D_A\r\n\r\n        </div>\r\n    </div>";
+	module.exports = "<div id=\"D_A\" transition=\"page\" class=\"page page-current\">\r\n        <header class=\"bar bar-nav\">\r\n            <a class=\"button button-link button-nav pull-left back\"  v-link=\"{path:'/D'}\">\r\n                <span class=\"icon icon-left\"></span>\r\n                返回\r\n            </a>\r\n            <h1 class=\"title\">D_A-Page</h1>\r\n        </header>\r\n        <div class=\"content\">\r\n\r\n            This is Page-D_A\r\n            </br>\r\n            <a v-link=\"{path:'/B'}\"><span>跳转到B</span></a>\r\n\r\n        </div>\r\n    </div>";
 
 /***/ }
 /******/ ]);

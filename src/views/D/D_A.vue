@@ -10,6 +10,8 @@
         <div class="content">
 
             This is Page-D_A
+            </br>
+            <a v-link="{path:'/B'}"><span>跳转到B</span></a>
 
         </div>
     </div>

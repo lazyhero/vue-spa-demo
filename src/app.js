@@ -60,3 +60,8 @@ router.afterEach(function (transition) {
 
 // 启动路由 顶层实例APP挂载到id为app的dom上
 router.start(app, '#app');
+
+//暴漏vue和router
+window.router = router;
+window.vue = Vue;
+console.info("暴漏vue和router---可进行调试");

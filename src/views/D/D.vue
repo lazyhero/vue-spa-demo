@@ -8,7 +8,7 @@
                     <a v-link="{ path: '/D/D_A'}" external class="item-link item-content">
                         <div class="item-media"><i class="icon icon-gift"></i></div>
                         <div class="item-inner">
-                            <div class="item-title">D-A</div>
+                            <div class="item-title">点击切换到D-A</div>
                         </div>
                     </a>
                 </li>
