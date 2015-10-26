@@ -11,7 +11,7 @@
 
             This is Page-D_A
             </br>
-            <a v-link="{path:'/B'}"><span class="shop">跳转到B</span></a>
+            <a v-link="{path:'/B'}"><span>跳转到B</span></a>
 
         </div>
     </div>
