@@ -155,7 +155,7 @@
 	 * Mixin global API
 	 */
 	
-	extend(Vue, __webpack_require__(22))
+	extend(Vue, __webpack_require__(23))
 	
 	/**
 	 * Vue and every constructor that extends Vue has an
@@ -168,7 +168,7 @@
 	
 	Vue.options = {
 	  replace: true,
-	  directives: __webpack_require__(25),
+	  directives: __webpack_require__(26),
 	  elementDirectives: __webpack_require__(60),
 	  filters: __webpack_require__(63),
 	  transitions: {},
@@ -217,7 +217,7 @@
 	extend(p, __webpack_require__(75))
 	extend(p, __webpack_require__(76))
 	
-	Vue.version = '1.0.0-rc.1'
+	Vue.version = '1.0.0-rc.2'
 	module.exports = _.Vue = Vue
 
 
@@ -231,9 +231,9 @@
 	extend(exports, lang)
 	extend(exports, __webpack_require__(12))
 	extend(exports, __webpack_require__(13))
-	extend(exports, __webpack_require__(19))
 	extend(exports, __webpack_require__(20))
 	extend(exports, __webpack_require__(21))
+	extend(exports, __webpack_require__(22))
 
 
 /***/ },
@@ -727,6 +727,7 @@
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
 	var config = __webpack_require__(15)
+	var transition = __webpack_require__(19)
 	
 	/**
 	 * Query an element selector if it's not an element already.
@@ -1033,6 +1034,56 @@
 	        node.removeAttribute(name)
 	        return _.camelize(name.replace(refRE, ''))
 	      }
+	    }
+	  }
+	}
+	
+	/**
+	 * Map a function to a range of nodes .
+	 *
+	 * @param {Node} node
+	 * @param {Node} end
+	 * @param {Function} op
+	 */
+	
+	exports.mapNodeRange = function (node, end, op) {
+	  var next
+	  while (node !== end) {
+	    next = node.nextSibling
+	    op(node)
+	    node = next
+	  }
+	  op(end)
+	}
+	
+	/**
+	 * Remove a range of nodes with transition, store
+	 * the nodes in a fragment with correct ordering,
+	 * and call callback when done.
+	 *
+	 * @param {Node} start
+	 * @param {Node} end
+	 * @param {Vue} vm
+	 * @param {DocumentFragment} frag
+	 * @param {Function} cb
+	 */
+	
+	exports.removeNodeRange = function (start, end, vm, frag, cb) {
+	  var done = false
+	  var removed = 0
+	  var nodes = []
+	  exports.mapNodeRange(start, end, function (node) {
+	    if (node === end) done = true
+	    nodes.push(node)
+	    transition.remove(node, vm, onRemoved)
+	  })
+	  function onRemoved () {
+	    removed++
+	    if (done && removed >= nodes.length) {
+	      for (var i = 0; i < nodes.length; i++) {
+	        frag.appendChild(nodes[i])
+	      }
+	      cb && cb()
 	    }
 	  }
 	}
@@ -1674,6 +1725,91 @@
 /* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
+	var _ = __webpack_require__(10)
+	
+	/**
+	 * Append with transition.
+	 *
+	 * @param {Element} el
+	 * @param {Element} target
+	 * @param {Vue} vm
+	 * @param {Function} [cb]
+	 */
+	
+	exports.append = function (el, target, vm, cb) {
+	  apply(el, 1, function () {
+	    target.appendChild(el)
+	  }, vm, cb)
+	}
+	
+	/**
+	 * InsertBefore with transition.
+	 *
+	 * @param {Element} el
+	 * @param {Element} target
+	 * @param {Vue} vm
+	 * @param {Function} [cb]
+	 */
+	
+	exports.before = function (el, target, vm, cb) {
+	  apply(el, 1, function () {
+	    _.before(el, target)
+	  }, vm, cb)
+	}
+	
+	/**
+	 * Remove with transition.
+	 *
+	 * @param {Element} el
+	 * @param {Vue} vm
+	 * @param {Function} [cb]
+	 */
+	
+	exports.remove = function (el, vm, cb) {
+	  apply(el, -1, function () {
+	    _.remove(el)
+	  }, vm, cb)
+	}
+	
+	/**
+	 * Apply transitions with an operation callback.
+	 *
+	 * @param {Element} el
+	 * @param {Number} direction
+	 *                  1: enter
+	 *                 -1: leave
+	 * @param {Function} op - the actual DOM operation
+	 * @param {Vue} vm
+	 * @param {Function} [cb]
+	 */
+	
+	var apply = exports.apply = function (el, direction, op, vm, cb) {
+	  var transition = el.__v_trans
+	  if (
+	    !transition ||
+	    // skip if there are no js hooks and CSS transition is
+	    // not supported
+	    (!transition.hooks && !_.transitionEndEvent) ||
+	    // skip transitions for initial compile
+	    !vm._isCompiled ||
+	    // if the vm is being manipulated by a parent directive
+	    // during the parent's compilation phase, skip the
+	    // animation.
+	    (vm.$parent && !vm.$parent._isCompiled)
+	  ) {
+	    op()
+	    if (cb) cb()
+	    return
+	  }
+	  var action = direction > 0 ? 'enter' : 'leave'
+	  transition[action](op, cb)
+	}
+
+
+/***/ },
+/* 20 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
 	var config = __webpack_require__(15)
 	var extend = _.extend
@@ -1792,8 +1928,7 @@
 	strats.beforeCompile =
 	strats.compiled =
 	strats.beforeDestroy =
-	strats.destroyed =
-	strats.props = function (parentVal, childVal) {
+	strats.destroyed = function (parentVal, childVal) {
 	  return childVal
 	    ? parentVal
 	      ? parentVal.concat(childVal)
@@ -1864,11 +1999,13 @@
 	 * Other object hashes.
 	 */
 	
+	strats.props =
 	strats.methods =
 	strats.computed = function (parentVal, childVal) {
 	  if (!childVal) return parentVal
 	  if (!parentVal) return childVal
-	  var ret = Object.create(parentVal)
+	  var ret = Object.create(null)
+	  extend(ret, parentVal)
 	  extend(ret, childVal)
 	  return ret
 	}
@@ -1923,21 +2060,22 @@
 	
 	function guardProps (options) {
 	  var props = options.props
-	  if (_.isPlainObject(props)) {
-	    options.props = Object.keys(props).map(function (key) {
-	      var val = props[key]
-	      if (!_.isPlainObject(val)) {
-	        val = { type: val }
+	  var i
+	  if (_.isArray(props)) {
+	    options.props = {}
+	    i = props.length
+	    while (i--) {
+	      options.props[props[i]] = null
+	    }
+	  } else if (_.isPlainObject(props)) {
+	    var keys = Object.keys(props)
+	    i = keys.length
+	    while (i--) {
+	      var val = props[keys[i]]
+	      if (typeof val === 'function') {
+	        props[keys[i]] = { type: val }
 	      }
-	      val.name = key
-	      return val
-	    })
-	  } else if (_.isArray(props)) {
-	    options.props = props.map(function (prop) {
-	      return typeof prop === 'string'
-	        ? { name: prop }
-	        : prop
-	    })
+	    }
 	  }
 	}
 	
@@ -2017,16 +2155,19 @@
 	 */
 	
 	exports.resolveAsset = function resolve (options, type, id) {
-	  var camelizedId = _.camelize(id)
-	  var pascalizedId = camelizedId.charAt(0).toUpperCase() + camelizedId.slice(1)
 	  var assets = options[type]
-	  return assets[id] || assets[camelizedId] || assets[pascalizedId]
+	  var camelizedId
+	  return assets[id] ||
+	    // camelCase ID
+	    assets[camelizedId = _.camelize(id)] ||
+	    // Pascal Case ID
+	    assets[camelizedId.charAt(0).toUpperCase() + camelizedId.slice(1)]
 	}
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 20 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
@@ -2183,7 +2324,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -2237,7 +2378,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
@@ -2257,13 +2398,13 @@
 	 * The following are exposed for advanced usage / plugins
 	 */
 	
-	exports.compiler = __webpack_require__(23)
-	exports.FragmentFactory = __webpack_require__(30)
+	exports.compiler = __webpack_require__(24)
+	exports.FragmentFactory = __webpack_require__(31)
 	exports.internalDirectives = __webpack_require__(45)
 	exports.parsers = {
 	  path: __webpack_require__(53),
 	  text: __webpack_require__(16),
-	  template: __webpack_require__(28),
+	  template: __webpack_require__(29),
 	  directive: __webpack_require__(18),
 	  expression: __webpack_require__(52)
 	}
@@ -2395,26 +2536,26 @@
 
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
 	
-	_.extend(exports, __webpack_require__(24))
+	_.extend(exports, __webpack_require__(25))
 	_.extend(exports, __webpack_require__(59))
 
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var publicDirectives = __webpack_require__(25)
+	var publicDirectives = __webpack_require__(26)
 	var internalDirectives = __webpack_require__(45)
 	var compileProps = __webpack_require__(58)
 	var textParser = __webpack_require__(16)
 	var dirParser = __webpack_require__(18)
-	var templateParser = __webpack_require__(28)
+	var templateParser = __webpack_require__(29)
 	var resolveAsset = _.resolveAsset
 	
 	// special binding prefixes
@@ -2589,10 +2730,11 @@
 	 * @param {Vue} vm
 	 * @param {Element} el
 	 * @param {Object} options
+	 * @param {Object} contextOptions
 	 * @return {Function}
 	 */
 	
-	exports.compileRoot = function (el, options) {
+	exports.compileRoot = function (el, options, contextOptions) {
 	  var containerAttrs = options._containerAttrs
 	  var replacerAttrs = options._replacerAttrs
 	  var contextLinkFn, replacerLinkFn
@@ -2604,8 +2746,8 @@
 	    // compiled separately and linked in different scopes.
 	    if (options._asComponent) {
 	      // 2. container attributes
-	      if (containerAttrs) {
-	        contextLinkFn = compileDirectives(containerAttrs, options)
+	      if (containerAttrs && contextOptions) {
+	        contextLinkFn = compileDirectives(containerAttrs, contextOptions)
 	      }
 	      if (replacerAttrs) {
 	        // 3. replacer attributes
@@ -3120,15 +3262,15 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 25 */
+/* 26 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// text & html
-	exports.text = __webpack_require__(26)
-	exports.html = __webpack_require__(27)
+	exports.text = __webpack_require__(27)
+	exports.html = __webpack_require__(28)
 	
 	// logic control
-	exports['for'] = __webpack_require__(29)
+	exports['for'] = __webpack_require__(30)
 	exports['if'] = __webpack_require__(33)
 	exports.show = __webpack_require__(34)
 	
@@ -3150,7 +3292,7 @@
 
 
 /***/ },
-/* 26 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
@@ -3170,11 +3312,11 @@
 
 
 /***/ },
-/* 27 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
-	var templateParser = __webpack_require__(28)
+	var templateParser = __webpack_require__(29)
 	
 	module.exports = {
 	
@@ -3216,7 +3358,7 @@
 
 
 /***/ },
-/* 28 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
@@ -3510,11 +3652,11 @@
 
 
 /***/ },
-/* 29 */
+/* 30 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var FragmentFactory = __webpack_require__(30)
+	var FragmentFactory = __webpack_require__(31)
 	var isObject = _.isObject
 	var uid = 0
 	
@@ -3522,11 +3664,24 @@
 	
 	  priority: 2000,
 	
+	  params: [
+	    'track-by',
+	    'stagger',
+	    'enter-stagger',
+	    'leave-stagger'
+	  ],
+	
 	  bind: function () {
 	    // support "item in items" syntax
 	    var inMatch = this.expression.match(/(.*) in (.*)/)
 	    if (inMatch) {
-	      this.alias = inMatch[1]
+	      var itMatch = inMatch[1].match(/\((.*),(.*)\)/)
+	      if (itMatch) {
+	        this.iterator = itMatch[1].trim()
+	        this.alias = itMatch[2].trim()
+	      } else {
+	        this.alias = inMatch[1].trim()
+	      }
 	      this.expression = inMatch[2]
 	    }
 	
@@ -3557,16 +3712,8 @@
 	    _.replace(this.el, this.end)
 	    _.before(this.start, this.end)
 	
-	    // check for trackby param
-	    this.idKey = this.param('track-by')
-	
 	    // check ref
 	    this.ref = _.findRef(this.el)
-	
-	    // check for transition stagger
-	    var stagger = +this.param('stagger')
-	    this.enterStagger = +this.param('enter-stagger') || stagger
-	    this.leaveStagger = +this.param('leave-stagger') || stagger
 	
 	    // cache
 	    this.cache = Object.create(null)
@@ -3603,10 +3750,11 @@
 	      item.hasOwnProperty('$key') &&
 	      item.hasOwnProperty('$value')
 	
-	    var idKey = this.idKey
+	    var trackByKey = this.params.trackBy
 	    var oldFrags = this.frags
 	    var frags = this.frags = new Array(data.length)
 	    var alias = this.alias
+	    var iterator = this.iterator
 	    var start = this.start
 	    var end = this.end
 	    var inDoc = _.inDoc(start)
@@ -3630,10 +3778,13 @@
 	        // update $key
 	        if (key) {
 	          frag.scope.$key = key
+	          if (iterator) {
+	            frag.scope[iterator] = key
+	          }
 	        }
 	        // update data for track-by, object repeat &
 	        // primitive values.
-	        if (idKey || convertedFromObject || primitive) {
+	        if (trackByKey || convertedFromObject || primitive) {
 	          frag.scope[alias] = value
 	        }
 	      } else { // new isntance
@@ -3660,7 +3811,6 @@
 	      frag = oldFrags[i]
 	      if (!frag.reused) {
 	        this.deleteCachedFrag(frag)
-	        frag.destroy()
 	        this.remove(frag, removalIndex++, totalRemoved, inDoc)
 	      }
 	    }
@@ -3722,6 +3872,9 @@
 	    } else if (scope.$key) {
 	      // avoid accidental fallback
 	      _.define(scope, '$key', null)
+	    }
+	    if (this.iterator) {
+	      _.defineReactive(scope, this.iterator, key || index)
 	    }
 	    var frag = this.factory.create(host, scope, this._frag)
 	    frag.forId = this.id
@@ -3828,11 +3981,11 @@
 	    if (inDoc && staggerAmount) {
 	      var op = frag.staggerCb = _.cancellable(function () {
 	        frag.staggerCb = null
-	        frag.remove()
+	        frag.remove(true)
 	      })
 	      setTimeout(op, staggerAmount)
 	    } else {
-	      frag.remove()
+	      frag.remove(true)
 	    }
 	  },
 	
@@ -3858,19 +4011,19 @@
 	   */
 	
 	  cacheFrag: function (value, frag, index, key) {
-	    var idKey = this.idKey
+	    var trackByKey = this.params.trackBy
 	    var cache = this.cache
 	    var primitive = !isObject(value)
 	    var id
-	    if (key || idKey || primitive) {
-	      id = idKey
-	        ? idKey === '$index'
+	    if (key || trackByKey || primitive) {
+	      id = trackByKey
+	        ? trackByKey === '$index'
 	          ? index
-	          : value[idKey]
+	          : value[trackByKey]
 	        : (key || value)
 	      if (!cache[id]) {
 	        cache[id] = frag
-	      } else if (idKey !== '$index') {
+	      } else if (trackByKey !== '$index') {
 	        process.env.NODE_ENV !== 'production' &&
 	        this.warnDuplicate(value)
 	      }
@@ -3900,14 +4053,14 @@
 	   */
 	
 	  getCachedFrag: function (value, index, key) {
-	    var idKey = this.idKey
+	    var trackByKey = this.params.trackBy
 	    var primitive = !isObject(value)
 	    var frag
-	    if (key || idKey || primitive) {
-	      var id = idKey
-	        ? idKey === '$index'
+	    if (key || trackByKey || primitive) {
+	      var id = trackByKey
+	        ? trackByKey === '$index'
 	          ? index
-	          : value[idKey]
+	          : value[trackByKey]
 	        : (key || value)
 	      frag = this.cache[id]
 	    } else {
@@ -3928,18 +4081,18 @@
 	
 	  deleteCachedFrag: function (frag) {
 	    var value = frag.raw
-	    var idKey = this.idKey
+	    var trackByKey = this.params.trackBy
 	    var scope = frag.scope
 	    var index = scope.$index
 	    // fix #948: avoid accidentally fall through to
 	    // a parent repeater which happens to have $key.
 	    var key = scope.hasOwnProperty('$key') && scope.$key
 	    var primitive = !isObject(value)
-	    if (idKey || key || primitive) {
-	      var id = idKey
-	        ? idKey === '$index'
+	    if (trackByKey || key || primitive) {
+	      var id = trackByKey
+	        ? trackByKey === '$index'
 	          ? index
-	          : value[idKey]
+	          : value[trackByKey]
 	        : (key || value)
 	      this.cache[id] = null
 	    } else {
@@ -3964,7 +4117,7 @@
 	    var hook = hooks && (hooks[type] || hooks.stagger)
 	    return hook
 	      ? hook.call(frag, index, total)
-	      : index * this[type]
+	      : index * parseInt(this.params[type] || this.params.stagger, 10)
 	  },
 	
 	  /**
@@ -4104,13 +4257,13 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(14)))
 
 /***/ },
-/* 30 */
+/* 31 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
-	var compiler = __webpack_require__(23)
-	var templateParser = __webpack_require__(28)
-	var Fragment = __webpack_require__(31)
+	var compiler = __webpack_require__(24)
+	var templateParser = __webpack_require__(29)
+	var Fragment = __webpack_require__(32)
 	var Cache = __webpack_require__(17)
 	var linkerCache = new Cache(5000)
 	
@@ -4166,11 +4319,11 @@
 
 
 /***/ },
-/* 31 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
-	var transition = __webpack_require__(32)
+	var transition = __webpack_require__(19)
 	
 	/**
 	 * Abstraction for a partially-compiled fragment.
@@ -4202,7 +4355,9 @@
 	  } else {
 	    this.node = _.createAnchor('fragment-start')
 	    this.end = _.createAnchor('fragment-end')
-	    this.nodes = _.toArray(frag.childNodes)
+	    this.frag = frag
+	    _.prepend(this.node, frag)
+	    frag.appendChild(this.end)
 	    this.before = multiBefore
 	    this.remove = multiRemove
 	  }
@@ -4242,15 +4397,15 @@
 	 * Insert fragment before target, single node version
 	 *
 	 * @param {Node} target
-	 * @param {Boolean} trans
+	 * @param {Boolean} withTransition
 	 */
 	
-	function singleBefore (target, trans) {
-	  var method = trans !== false
+	function singleBefore (target, withTransition) {
+	  this.inserted = true
+	  var method = withTransition !== false
 	    ? transition.before
 	    : _.before
 	  method(this.node, target, this.vm)
-	  this.inserted = true
 	  if (_.inDoc(this.node)) {
 	    this.callHook(attach)
 	  }
@@ -4258,36 +4413,40 @@
 	
 	/**
 	 * Remove fragment, single node version
+	 *
+	 * @param {Boolean} [destroy]
 	 */
 	
-	function singleRemove () {
-	  var shouldCallRemove = _.inDoc(this.node)
-	  transition.remove(this.node, this.vm)
+	function singleRemove (destroy) {
 	  this.inserted = false
-	  if (shouldCallRemove) {
-	    this.callHook(detach)
-	  }
+	  var shouldCallRemove = _.inDoc(this.node)
+	  var self = this
+	  transition.remove(this.node, this.vm, function () {
+	    if (shouldCallRemove) {
+	      self.callHook(detach)
+	    }
+	    if (destroy) {
+	      self.destroy()
+	    }
+	  })
 	}
 	
 	/**
 	 * Insert fragment before target, multi-nodes version
 	 *
 	 * @param {Node} target
-	 * @param {Boolean} trans
+	 * @param {Boolean} withTransition
 	 */
 	
-	function multiBefore (target, trans) {
-	  _.before(this.node, target)
-	  var nodes = this.nodes
+	function multiBefore (target, withTransition) {
+	  this.inserted = true
 	  var vm = this.vm
-	  var method = trans !== false
+	  var method = withTransition !== false
 	    ? transition.before
 	    : _.before
-	  for (var i = 0, l = nodes.length; i < l; i++) {
-	    method(nodes[i], target, vm)
-	  }
-	  _.before(this.end, target)
-	  this.inserted = true
+	  _.mapNodeRange(this.node, this.end, function (node) {
+	    method(node, target, vm)
+	  })
 	  if (_.inDoc(this.node)) {
 	    this.callHook(attach)
 	  }
@@ -4295,27 +4454,22 @@
 	
 	/**
 	 * Remove fragment, multi-nodes version
+	 *
+	 * @param {Boolean} [destroy]
 	 */
 	
-	function multiRemove () {
-	  var shouldCallRemove = _.inDoc(this.node)
-	  var parent = this.node.parentNode
-	  var node = this.node.nextSibling
-	  var nodes = this.nodes = []
-	  var vm = this.vm
-	  var next
-	  while (node !== this.end) {
-	    nodes.push(node)
-	    next = node.nextSibling
-	    transition.remove(node, vm)
-	    node = next
-	  }
-	  parent.removeChild(this.node)
-	  parent.removeChild(this.end)
+	function multiRemove (destroy) {
 	  this.inserted = false
-	  if (shouldCallRemove) {
-	    this.callHook(detach)
-	  }
+	  var self = this
+	  var shouldCallRemove = _.inDoc(this.node)
+	  _.removeNodeRange(this.node, this.end, this.vm, this.frag, function () {
+	    if (shouldCallRemove) {
+	      self.callHook(detach)
+	    }
+	    if (destroy) {
+	      self.destroy()
+	    }
+	  })
 	}
 	
 	/**
@@ -4346,112 +4500,11 @@
 
 
 /***/ },
-/* 32 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var _ = __webpack_require__(10)
-	
-	/**
-	 * Append with transition.
-	 *
-	 * @param {Element} el
-	 * @param {Element} target
-	 * @param {Vue} vm
-	 * @param {Function} [cb]
-	 */
-	
-	exports.append = function (el, target, vm, cb) {
-	  apply(el, 1, function () {
-	    target.appendChild(el)
-	  }, vm, cb)
-	}
-	
-	/**
-	 * InsertBefore with transition.
-	 *
-	 * @param {Element} el
-	 * @param {Element} target
-	 * @param {Vue} vm
-	 * @param {Function} [cb]
-	 */
-	
-	exports.before = function (el, target, vm, cb) {
-	  apply(el, 1, function () {
-	    _.before(el, target)
-	  }, vm, cb)
-	}
-	
-	/**
-	 * Remove with transition.
-	 *
-	 * @param {Element} el
-	 * @param {Vue} vm
-	 * @param {Function} [cb]
-	 */
-	
-	exports.remove = function (el, vm, cb) {
-	  apply(el, -1, function () {
-	    _.remove(el)
-	  }, vm, cb)
-	}
-	
-	/**
-	 * Remove by appending to another parent with transition.
-	 * This is only used in block operations.
-	 *
-	 * @param {Element} el
-	 * @param {Element} target
-	 * @param {Vue} vm
-	 * @param {Function} [cb]
-	 */
-	
-	exports.removeThenAppend = function (el, target, vm, cb) {
-	  apply(el, -1, function () {
-	    target.appendChild(el)
-	  }, vm, cb)
-	}
-	
-	/**
-	 * Apply transitions with an operation callback.
-	 *
-	 * @param {Element} el
-	 * @param {Number} direction
-	 *                  1: enter
-	 *                 -1: leave
-	 * @param {Function} op - the actual DOM operation
-	 * @param {Vue} vm
-	 * @param {Function} [cb]
-	 */
-	
-	var apply = exports.apply = function (el, direction, op, vm, cb) {
-	  var transition = el.__v_trans
-	  if (
-	    !transition ||
-	    // skip if there are no js hooks and CSS transition is
-	    // not supported
-	    (!transition.hooks && !_.transitionEndEvent) ||
-	    // skip transitions for initial compile
-	    !vm._isCompiled ||
-	    // if the vm is being manipulated by a parent directive
-	    // during the parent's compilation phase, skip the
-	    // animation.
-	    (vm.$parent && !vm.$parent._isCompiled)
-	  ) {
-	    op()
-	    if (cb) cb()
-	    return
-	  }
-	  var action = direction > 0 ? 'enter' : 'leave'
-	  transition[action](op, cb)
-	}
-
-
-/***/ },
 /* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var FragmentFactory = __webpack_require__(30)
+	var FragmentFactory = __webpack_require__(31)
 	
 	module.exports = {
 	
@@ -4492,8 +4545,7 @@
 	
 	  insert: function () {
 	    if (this.elseFrag) {
-	      this.elseFrag.remove()
-	      this.elseFrag.destroy()
+	      this.elseFrag.remove(true)
 	      this.elseFrag = null
 	    }
 	    this.frag = this.factory.create(this._host, this._scope, this._frag)
@@ -4502,8 +4554,7 @@
 	
 	  remove: function () {
 	    if (this.frag) {
-	      this.frag.remove()
-	      this.frag.destroy()
+	      this.frag.remove(true)
 	      this.frag = null
 	    }
 	    if (this.elseFactory) {
@@ -4526,7 +4577,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
-	var transition = __webpack_require__(32)
+	var transition = __webpack_require__(19)
 	
 	module.exports = {
 	
@@ -4571,6 +4622,7 @@
 	  priority: 800,
 	  twoWay: true,
 	  handlers: handlers,
+	  params: ['lazy', 'number', 'debounce'],
 	
 	  /**
 	   * Possible elements:
@@ -4653,14 +4705,9 @@
 	    var self = this
 	    var el = this.el
 	    var isRange = el.type === 'range'
-	
-	    // check params
-	    // - lazy: update model on "change" instead of "input"
-	    var lazy = this.param('lazy') != null
-	    // - number: cast value into number when updating model.
-	    var number = this.param('number') != null
-	    // - debounce: debounce the input listener
-	    var debounce = parseInt(this.param('debounce'), 10)
+	    var lazy = this.params.lazy
+	    var number = this.params.number
+	    var debounce = this.params.debounce
 	
 	    // handle composition events.
 	    //   http://blog.evanyou.me/2014/01/03/composition-event/
@@ -4715,6 +4762,8 @@
 	        }
 	      })
 	    }
+	
+	    // apply debounce
 	    if (debounce) {
 	      this.listener = _.debounce(this.listener, debounce)
 	    }
@@ -4788,7 +4837,6 @@
 	  bind: function () {
 	    var self = this
 	    var el = this.el
-	    var number = this.param('number') != null
 	
 	    this.getValue = function () {
 	      // value overwrite via v-bind:value
@@ -4796,7 +4844,7 @@
 	        return el._value
 	      }
 	      var val = el.value
-	      if (number) {
+	      if (self.params.number) {
 	        val = _.toNumber(val)
 	      }
 	      return val
@@ -4837,13 +4885,13 @@
 	      }
 	    }
 	
-	    this.number = this.param('number') != null
+	    // check if this is a multiple select
 	    var multiple = this.multiple = el.hasAttribute('multiple')
 	
 	    // attach listener
 	    this.listener = function () {
 	      var value = getValue(el, multiple)
-	      value = self.number
+	      value = self.params.number
 	        ? _.isArray(value)
 	          ? value.map(_.toNumber)
 	          : _.toNumber(value)
@@ -4953,12 +5001,11 @@
 	  bind: function () {
 	    var self = this
 	    var el = this.el
-	    var number = this.param('number') != null
 	
 	    this.getValue = function () {
 	      return el.hasOwnProperty('_value')
 	        ? el._value
-	        : number
+	        : self.params.number
 	          ? _.toNumber(el.value)
 	          : el.value
 	    }
@@ -5079,6 +5126,12 @@
 	  },
 	
 	  update: function (handler) {
+	    // stub a noop for v-on with no value,
+	    // e.g. @mousedown.prevent
+	    if (!this.descriptor.raw) {
+	      handler = function () {}
+	    }
+	
 	    if (typeof handler !== 'function') {
 	      process.env.NODE_ENV !== 'production' && _.warn(
 	        'v-on:' + this.arg + '="' +
@@ -5170,10 +5223,14 @@
 	
 	  bind: function () {
 	    var attr = this.arg
+	    var tag = this.el.tagName
 	    // handle interpolation bindings
 	    if (this.descriptor.interp) {
 	      // only allow binding on native attributes
-	      if (disallowedInterpAttrRE.test(attr)) {
+	      if (
+	        disallowedInterpAttrRE.test(attr) ||
+	        (attr === 'name' && (tag === 'PARTIAL' || tag === 'SLOT'))
+	      ) {
 	        process.env.NODE_ENV !== 'production' && _.warn(
 	          attr + '="' + this.descriptor.raw + '": ' +
 	          'attribute interpolation is not allowed in Vue.js ' +
@@ -5475,7 +5532,7 @@
 	        addClass(this.el, value[i])
 	      }
 	    }
-	    this.prevKeys = value
+	    this.prevKeys = value.slice()
 	  },
 	
 	  cleanup: function (value) {
@@ -5483,7 +5540,7 @@
 	      var i = this.prevKeys.length
 	      while (i--) {
 	        var key = this.prevKeys[i]
-	        if (!value || !contains(value, key)) {
+	        if (key && (!value || !contains(value, key))) {
 	          removeClass(this.el, key)
 	        }
 	      }
@@ -5513,11 +5570,17 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var templateParser = __webpack_require__(28)
+	var templateParser = __webpack_require__(29)
 	
 	module.exports = {
 	
 	  priority: 1500,
+	
+	  params: [
+	    'keep-alive',
+	    'transition-mode',
+	    'inline-template'
+	  ],
 	
 	  /**
 	   * Setup. Two possible usages:
@@ -5531,25 +5594,19 @@
 	
 	  bind: function () {
 	    if (!this.el.__vue__) {
-	      // check keep-alive options.
-	      // If yes, instead of destroying the active vm when
-	      // hiding (v-if) or switching (dynamic literal) it,
-	      // we simply remove it from the DOM and save it in a
-	      // cache object, with its constructor id as the key.
-	      this.keepAlive = this.param('keep-alive') != null
-	
 	      // check ref
 	      this.ref = _.findRef(this.el)
 	      var refs = (this._scope || this.vm).$refs
 	      if (this.ref && !refs.hasOwnProperty(this.ref)) {
 	        _.defineReactive(refs, this.ref, null)
 	      }
-	
+	      // keep-alive cache
+	      this.keepAlive = this.params.keepAlive
 	      if (this.keepAlive) {
 	        this.cache = {}
 	      }
 	      // check inline-template
-	      if (this.param('inline-template') !== null) {
+	      if (this.params.inlineTemplate) {
 	        // extract inline template as a DocumentFragment
 	        this.inlineTemplate = _.extractContent(this.el, true)
 	      }
@@ -5563,7 +5620,6 @@
 	        // create a ref anchor
 	      this.anchor = _.createAnchor('v-component')
 	      _.replace(this.el, this.anchor)
-	      this.transMode = this.param('transition-mode')
 	      // if static, build right now.
 	      if (this.literal) {
 	        this.setComponent(this.expression)
@@ -5810,7 +5866,7 @@
 	    var self = this
 	    var current = this.childVM
 	    this.childVM = target
-	    switch (self.transMode) {
+	    switch (self.params.transitionMode) {
 	      case 'in-out':
 	        target.$before(self.anchor, function () {
 	          self.remove(current, cb)
@@ -6068,17 +6124,26 @@
 	  }
 	  // two-way sync for v-for alias
 	  var forContext = scope.$forContext
-	  if (forContext && forContext.alias === this.expression) {
-	    if (forContext.filters) {
-	      process.env.NODE_ENV !== 'production' && _.warn(
+	  if (process.env.NODE_ENV !== 'production') {
+	    if (
+	      forContext &&
+	      forContext.filters &&
+	      (new RegExp(forContext.alias + '\\b')).test(this.expression)
+	    ) {
+	      _.warn(
 	        'It seems you are using two-way binding on ' +
-	        'a v-for alias, and the v-for has filters. ' +
-	        'This will not work properly. Either remove the ' +
-	        'filters or use an array of objects and bind to ' +
-	        'object properties instead.'
+	        'a v-for alias (' + this.expression + '), and the ' +
+	        'v-for has filters. This will not work properly. ' +
+	        'Either remove the filters or use an array of ' +
+	        'objects and bind to object properties instead.'
 	      )
-	      return
 	    }
+	  }
+	  if (
+	    forContext &&
+	    forContext.alias === this.expression &&
+	    !forContext.filters
+	  ) {
 	    if (scope.$key) { // original is an object
 	      forContext.rawValue[scope.$key] = value
 	    } else {
@@ -7515,6 +7580,7 @@
 	var dirParser = __webpack_require__(18)
 	var propDef = __webpack_require__(49)
 	var propBindingModes = __webpack_require__(15)._propBindingModes
+	var empty = {}
 	
 	// regexes
 	var identRE = __webpack_require__(53).identRE
@@ -7531,11 +7597,12 @@
 	
 	module.exports = function compileProps (el, propOptions) {
 	  var props = []
-	  var i = propOptions.length
+	  var names = Object.keys(propOptions)
+	  var i = names.length
 	  var options, name, attr, value, path, parsed, prop
 	  while (i--) {
-	    options = propOptions[i]
-	    name = options.name
+	    name = names[i]
+	    options = propOptions[name] || empty
 	
 	    if (process.env.NODE_ENV !== 'production' && name === '$data') {
 	      _.warn('Do not use $data as prop.')
@@ -7723,7 +7790,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var templateParser = __webpack_require__(28)
+	var templateParser = __webpack_require__(29)
 	var specialCharRE = /[^\w\-:\.]/
 	
 	/**
@@ -7886,7 +7953,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
-	var templateParser = __webpack_require__(28)
+	var templateParser = __webpack_require__(29)
 	
 	// This is the elementDirective that handles <content>
 	// transclusions. It relies on the raw content of an
@@ -7897,6 +7964,8 @@
 	
 	  priority: 1750,
 	
+	  params: ['name'],
+	
 	  bind: function () {
 	    var host = this.vm
 	    var raw = host.$options._content
@@ -7906,7 +7975,7 @@
 	      return
 	    }
 	    var context = host._context
-	    var slotName = this.param('name')
+	    var slotName = this.params.name
 	    if (!slotName) {
 	      // Default content
 	      var self = this
@@ -8014,42 +8083,29 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var FragmentFactory = __webpack_require__(30)
 	var vIf = __webpack_require__(33)
-	var Watcher = __webpack_require__(50)
+	var FragmentFactory = __webpack_require__(31)
 	
 	module.exports = {
 	
 	  priority: 1750,
 	
-	  bind: function () {
-	    var el = this.el
-	    this.anchor = _.createAnchor('v-partial')
-	    _.replace(el, this.anchor)
-	    var id = el.getAttribute('name')
-	    if (id != null) {
-	      // static partial
-	      this.insert(id)
-	    } else {
-	      id = _.getBindAttr(el, 'name')
-	      if (id) {
-	        this.setupDynamic(id)
+	  params: ['name'],
+	
+	  // watch changes to name for dynamic partials
+	  paramWatchers: {
+	    name: function (value) {
+	      vIf.remove.call(this)
+	      if (value) {
+	        this.insert(value)
 	      }
 	    }
 	  },
 	
-	  setupDynamic: function (exp) {
-	    var self = this
-	    var onNameChange = function (value) {
-	      vIf.remove.call(self)
-	      if (value) {
-	        self.insert(value)
-	      }
-	    }
-	    this.nameWatcher = new Watcher(this.vm, exp, onNameChange, {
-	      scope: this._scope
-	    })
-	    onNameChange(this.nameWatcher.value)
+	  bind: function () {
+	    this.anchor = _.createAnchor('v-partial')
+	    _.replace(this.el, this.anchor)
+	    this.insert(this.params.name)
 	  },
 	
 	  insert: function (id) {
@@ -8066,9 +8122,6 @@
 	  unbind: function () {
 	    if (this.frag) {
 	      this.frag.destroy()
-	    }
-	    if (this.nameWatcher) {
-	      this.nameWatcher.teardown()
 	    }
 	  }
 	}
@@ -8205,7 +8258,7 @@
 
 	var _ = __webpack_require__(10)
 	var Path = __webpack_require__(53)
-	var toArray = __webpack_require__(29)._postProcess
+	var toArray = __webpack_require__(30)._postProcess
 	
 	/**
 	 * Filter filter for arrays
@@ -8352,8 +8405,9 @@
 	
 	  // fragment instance properties
 	  this._isFragment = false
-	  this._fragmentStart =    // @type {CommentNode}
-	  this._fragmentEnd = null // @type {CommentNode}
+	  this._fragment =         // @type {DocumentFragment}
+	  this._fragmentStart =    // @type {Text|Comment}
+	  this._fragmentEnd = null // @type {Text|Comment}
 	
 	  // lifecycle state
 	  this._isCompiled =
@@ -8600,7 +8654,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var compiler = __webpack_require__(23)
+	var compiler = __webpack_require__(24)
 	var Observer = __webpack_require__(68)
 	var Dep = __webpack_require__(51)
 	var Watcher = __webpack_require__(50)
@@ -9192,7 +9246,7 @@
 
 	var _ = __webpack_require__(10)
 	var Directive = __webpack_require__(71)
-	var compiler = __webpack_require__(23)
+	var compiler = __webpack_require__(24)
 	
 	/**
 	 * Transclude, compile and link element.
@@ -9221,7 +9275,8 @@
 	
 	  // root is always compiled per-instance, because
 	  // container attrs and props can be different every time.
-	  var rootLinker = compiler.compileRoot(el, options)
+	  var contextOptions = this._context && this._context.$options
+	  var rootLinker = compiler.compileRoot(el, options, contextOptions)
 	
 	  // compile and link the rest
 	  var contentLinkFn
@@ -9256,6 +9311,8 @@
 	    _.replace(original, el)
 	  }
 	
+	  this._isCompiled = true
+	  this._callHook('compiled')
 	  return el
 	}
 	
@@ -9275,7 +9332,7 @@
 	    if (this._fragmentStart.nodeType === 3) {
 	      this._fragmentStart.data = this._fragmentEnd.data = ''
 	    }
-	    this._blockFragment = el
+	    this._fragment = el
 	  } else {
 	    this.$el = el
 	  }
@@ -9322,6 +9379,14 @@
 	  var parent = this.$parent
 	  if (parent && !parent._isBeingDestroyed) {
 	    parent.$children.$remove(this)
+	    // unregister ref
+	    var ref = this.$options._ref
+	    if (ref) {
+	      var scope = this._scope || this._context
+	      if (scope.$refs[ref] === this) {
+	        scope.$refs[ref] = null
+	      }
+	    }
 	  }
 	  // remove self from owner fragment
 	  if (this._frag) {
@@ -9344,14 +9409,6 @@
 	  i = this._watchers.length
 	  while (i--) {
 	    this._watchers[i].teardown()
-	  }
-	  // unregister ref
-	  var ref = this.$options._ref
-	  if (ref) {
-	    var scope = this._scope || this._context
-	    if (scope.$refs[ref] === this) {
-	      scope.$refs[ref] = null
-	    }
 	  }
 	  // remove reference to self on $el
 	  if (this.$el) {
@@ -9487,6 +9544,9 @@
 	    _.extend(this, def)
 	  }
 	
+	  // setup directive params
+	  this._setupParams()
+	
 	  // initial bind
 	  if (this.bind) {
 	    this.bind()
@@ -9495,7 +9555,7 @@
 	  if (this.literal) {
 	    this.update && this.update(descriptor.raw)
 	  } else if (
-	    this.expression &&
+	    (this.expression || this.modifiers) &&
 	    (this.update || this.twoWay) &&
 	    !this._checkStatement()
 	  ) {
@@ -9542,6 +9602,65 @@
 	}
 	
 	/**
+	 * Setup all param attributes, e.g. track-by,
+	 * transition-mode, etc...
+	 */
+	
+	Directive.prototype._setupParams = function () {
+	  if (!this.params) {
+	    return
+	  }
+	  var params = this.params
+	  // swap the params array with a fresh object.
+	  this.params = Object.create(null)
+	  var i = params.length
+	  var key, val, mappedKey
+	  while (i--) {
+	    key = params[i]
+	    mappedKey = _.camelize(key)
+	    val = _.attr(this.el, key)
+	    if (val != null) {
+	      // static
+	      this.params[mappedKey] = val === '' ? true : val
+	    } else {
+	      // dynamic
+	      val = _.getBindAttr(this.el, key)
+	      if (val != null) {
+	        this._setupParamWatcher(mappedKey, val)
+	      }
+	    }
+	  }
+	}
+	
+	/**
+	 * Setup a watcher for a dynamic param.
+	 *
+	 * @param {String} key
+	 * @param {String} expression
+	 */
+	
+	Directive.prototype._setupParamWatcher = function (key, expression) {
+	  var self = this
+	  var called = false
+	  var unwatch = (this._scope || this.vm).$watch(expression, function (val, oldVal) {
+	    self.params[key] = val
+	    // since we are in immediate mode,
+	    // only call the param change callbacks if this is not the first update.
+	    if (called) {
+	      var cb = self.paramWatchers && self.paramWatchers[key]
+	      if (cb) {
+	        cb.call(self, val, oldVal)
+	      }
+	    } else {
+	      called = true
+	    }
+	  }, {
+	    immediate: true
+	  })
+	  ;(this._paramUnwatchFns || (this._paramUnwatchFns = [])).push(unwatch)
+	}
+	
+	/**
 	 * Check if the directive is a function caller
 	 * and if the expression is a callable one. If both true,
 	 * we wrap up the expression and use it as the event
@@ -9569,30 +9688,6 @@
 	    this.update(handler)
 	    return true
 	  }
-	}
-	
-	/**
-	 * Check for an attribute directive param, e.g. lazy
-	 *
-	 * @param {String} name
-	 * @return {String}
-	 */
-	
-	Directive.prototype.param = function (name) {
-	  var param = _.attr(this.el, name)
-	  if (param != null) {
-	    param = (this._scope || this.vm).$interpolate(param)
-	  } else {
-	    param = _.getBindAttr(this.el, name)
-	    if (param != null) {
-	      param = (this._scope || this.vm).$eval(param)
-	      process.env.NODE_ENV !== 'production' && _.log(
-	        'You are using bind- syntax on "' + name + '", which ' +
-	        'is a directive param. It will be evaluated only once.'
-	      )
-	    }
-	  }
-	  return param
 	}
 	
 	/**
@@ -9663,13 +9758,21 @@
 	      this._watcher.teardown()
 	    }
 	    var listeners = this._listeners
+	    var i
 	    if (listeners) {
-	      for (var i = 0; i < listeners.length; i++) {
+	      i = listeners.length
+	      while (i--) {
 	        _.off(this.el, listeners[i][0], listeners[i][1])
 	      }
 	    }
-	    this.vm = this.el =
-	    this._watcher = this._listeners = null
+	    var unwatchFns = this._paramUnwatchFns
+	    if (unwatchFns) {
+	      i = unwatchFns.length
+	      while (i--) {
+	        unwatchFns[i]()
+	      }
+	    }
+	    this.vm = this.el = this._watcher = this._listeners = null
 	  }
 	}
 	
@@ -9962,7 +10065,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var _ = __webpack_require__(10)
-	var transition = __webpack_require__(32)
+	var transition = __webpack_require__(19)
 	
 	/**
 	 * Convenience on-instance nextTick. The callback is
@@ -10057,22 +10160,19 @@
 	  // if we are not in document, no need to check
 	  // for transitions
 	  if (!inDoc) withTransition = false
-	  var op
 	  var self = this
 	  var realCb = function () {
 	    if (inDoc) self._callHook('detached')
 	    if (cb) cb()
 	  }
-	  if (
-	    this._isFragment &&
-	    !this._blockFragment.hasChildNodes()
-	  ) {
-	    op = withTransition === false
-	      ? append
-	      : transition.removeThenAppend
-	    blockOp(this, this._blockFragment, op, realCb)
+	  if (this._isFragment) {
+	    _.removeNodeRange(
+	      this._fragmentStart,
+	      this._fragmentEnd,
+	      this, this._fragment, realCb
+	    )
 	  } else {
-	    op = withTransition === false
+	    var op = withTransition === false
 	      ? remove
 	      : transition.remove
 	    op(this.$el, this, realCb)
@@ -10096,14 +10196,17 @@
 	  target = query(target)
 	  var targetIsDetached = !_.inDoc(target)
 	  var op = withTransition === false || targetIsDetached
-	    ? op1
-	    : op2
+	      ? op1
+	      : op2
 	  var shouldCallHook =
 	    !targetIsDetached &&
 	    !vm._isAttached &&
 	    !_.inDoc(vm.$el)
 	  if (vm._isFragment) {
-	    blockOp(vm, target, op, cb)
+	    _.mapNodeRange(vm._fragmentStart, vm._fragmentEnd, function (node) {
+	      op(node, target, vm)
+	    })
+	    cb && cb()
 	  } else {
 	    op(vm.$el, target, vm, cb)
 	  }
@@ -10111,28 +10214,6 @@
 	    vm._callHook('attached')
 	  }
 	  return vm
-	}
-	
-	/**
-	 * Execute a transition operation on a fragment instance,
-	 * iterating through all its block nodes.
-	 *
-	 * @param {Vue} vm
-	 * @param {Node} target
-	 * @param {Function} op
-	 * @param {Function} cb
-	 */
-	
-	function blockOp (vm, target, op, cb) {
-	  var current = vm._fragmentStart
-	  var end = vm._fragmentEnd
-	  var next
-	  while (next !== end) {
-	    next = current.nextSibling
-	    op(current, target, vm)
-	    current = next
-	  }
-	  op(end, target, vm, cb)
 	}
 	
 	/**
@@ -10369,7 +10450,7 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {var _ = __webpack_require__(10)
-	var compiler = __webpack_require__(23)
+	var compiler = __webpack_require__(24)
 	
 	/**
 	 * Set instance target element and kick off the compilation
@@ -10393,8 +10474,6 @@
 	    el = document.createElement('div')
 	  }
 	  this._compile(el)
-	  this._isCompiled = true
-	  this._callHook('compiled')
 	  this._initDOMHooks()
 	  if (_.inDoc(this.$el)) {
 	    this._callHook('attached')
@@ -10730,7 +10809,9 @@
 	        throw new Error('Must start vue-router with a component and a ' + 'root container.');
 	      }
 	      this._appContainer = container;
-	      this._appConstructor = typeof App === 'function' ? App : Vue.extend(App);
+	      var Ctor = this._appConstructor = typeof App === 'function' ? App : Vue.extend(App);
+	      // give it a name for better debugging
+	      Ctor.options.name = Ctor.options.name || 'RouterApp';
 	    }
 	    this.history.start();
 	  };
@@ -12195,7 +12276,7 @@
 /* 93 */
 /***/ function(module, exports) {
 
-	var core = module.exports = {version: '1.2.2'};
+	var core = module.exports = {version: '1.2.3'};
 	if(typeof __e == 'number')__e = core; // eslint-disable-line no-undef
 
 /***/ },
@@ -13067,22 +13148,28 @@
 	        if (e.button !== 0) return;
 	
 	        var target = _this.target;
-	        if (_this.el.tagName === 'A' || e.target === _this.el) {
-	          // v-link on <a v-link="'path'">
+	        var go = function go(target) {
 	          e.preventDefault();
 	          if (target != null) {
 	            router.go(target);
 	          }
+	        };
+	
+	        if (_this.el.tagName === 'A' || e.target === _this.el) {
+	          // v-link on <a v-link="'path'">
+	          go(target);
 	        } else {
 	          // v-link delegate on <div v-link>
 	          var el = e.target;
 	          while (el && el.tagName !== 'A' && el !== _this.el) {
 	            el = el.parentNode;
 	          }
-	          if (!el || el.tagName !== 'A' || !el.href) return;
-	          if (sameOrigin(el)) {
-	            e.preventDefault();
-	            router.go({
+	          if (!el) return;
+	          if (el.tagName !== 'A' || !el.href) {
+	            // allow not anchor
+	            go(target);
+	          } else if (sameOrigin(el)) {
+	            go({
 	              path: el.pathname,
 	              replace: target && target.replace,
 	              append: target && target.append
