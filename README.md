@@ -5,8 +5,8 @@
 2.  演示常见需求:vuejs结合vue-router 配合transition指令动画
 版本依赖  
 
-* vuejs 1.0rc
-* vue-router 0.7.2(未发布,用其github-dev,为了支持keep-alive)
+* vuejs 1.0.0-rc.2
+* vue-router 0.7.5
 * ui部分为SUI
 
 >效果浏览  
@@ -21,11 +21,3 @@
 2. npm install
 3. gulp or gulp watch
 
->最好安装好webpack 虽然这里是用gulp结合的
-
->未解决问题
-
-vuejs-1.0rc版本 src绑定指令问题 
-```html
-<img src="本地文件"> 不会了 file-loader url-loader 尝试require方式下成功
-```
