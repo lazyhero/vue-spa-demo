@@ -1,11 +1,9 @@
 # vue-spa-demo
 >DEMO说明
 
-<<<<<<< HEAD
 1.  做了一些界面完善 更具业务情景 详情页面模仿 滴滴出行详情页
 =======
 1.  新增v-bind v-model v-for
->>>>>>> master
 2.  演示常见需求:vuejs结合vue-router 配合transition指令动画
 版本依赖  
 
