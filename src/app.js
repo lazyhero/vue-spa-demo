@@ -2,47 +2,56 @@
 // pre-process and insert css directly with require().
 // See webpack.config.js for details.
 var Vue = require('vue')
-var VueRouter = require('vue-router');
+var VueRouter = require('vue-router')
 Vue.use(VueRouter);
 
 var app = Vue.extend(require('./app.vue'))
 
 var router = new VueRouter({
-    hashbang: true
+    hashbang: true //hash路由
 })
 
-// normal routes
+//路由表
 router.map({
-    '/A': {
-        component: require('./views/A.vue')
+    '/home': {
+        component: require('./views/home.vue')
     },
     '/B': {
-        component: require('./views/B.vue'),
+        component: require('./views/list.vue'),
+        //子路由
         subRoutes:{
-            'B_A/:recordId': {
-                name: 'B_A', // 给这条路径加上一个名字
-                component: require('./views/B_A.vue')
+            'detail/:giftId': {
+                name: 'detail', //具名路由
+                component: require('./views/detail.vue')
             }
         }
     },
     '/C': {
-        component: require('./views/C.vue')
+        component: require('./views/tab.vue')
     },
     '/D': {
-        component: require('./views/D/D.vue'),
+        component: require('./views/paged/paged.vue'),
         subRoutes: {
-            '/D_A': {
-                component: require('./views/D/D_A.vue')
+            '/toonelevel': {
+                component: require('./views/paged/toonelevel.vue')
+            },
+            '/vfor': {
+                component: require('./views/paged/vfor.vue')
+            },
+            '/vmodel': {
+                component: require('./views/paged/vmodel.vue')
             }
         }
     }
 })
 
-//默认首屏为ViewA
+//默认/重定向到home页
 router.redirect({
-    '/':"/A"
+    '/':"/home"
 })
-
+//注册路由切换前
+//使底部菜单栏在一级路由切换时一直保持显示
+//在二级页时隐藏
 router.beforeEach(function (transition) {
     var toPath = transition.to.path;
     console.info()
@@ -53,15 +62,12 @@ router.beforeEach(function (transition) {
     }
     transition.next()
 })
-
+//注册路由切换后
 router.afterEach(function (transition) {
-    console.log('当前路由为: ' + transition.to.path)
+    console.log('成功浏览到: ' + transition.to.path)
+    $.refreshScroller();
 })
 
-// 启动路由 顶层实例APP挂载到id为app的dom上
 router.start(app, '#app');
-
-//暴漏vue和router
+//暴漏路由调试接口
 window.router = router;
-window.vue = Vue;
-console.info("暴漏vue和router---可进行调试");
