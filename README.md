@@ -1,7 +1,7 @@
 # vue-spa-demo
 >DEMO说明
 
-1.  小项目直接精简得到,比较简陋
+1.  做了一些界面完善 更具业务情景 详情页面模仿 滴滴出行详情页
 2.  演示常见需求:vuejs结合vue-router 配合transition指令动画
 版本依赖  
 

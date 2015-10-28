@@ -2,29 +2,28 @@
 </style>
 
 <template>
-    <!--B_A详情页仿滴滴出行积分商城-->
     <div class="page page-current" >
         <div class="content detail_content">
             <div class="row no-gutter">
                 <div class="col-100 img_head">
-                    <img class="gift-cover" src="{{B.bigPic}}">
+                    <img class="gift-cover" src="{{gift.bigPic}}">
                     <div class="gradients">
-                        <p id="merchant_name">{{B.merchant_name}}</p>
-                        <p id="name">{{B.name}}</p>
+                        <p id="merchant_name">{{gift.merchant_name}}</p>
+                        <p id="name">{{gift.name}}</p>
                     </div>
                 </div>
             </div>
             <div class="row no-gutter describe" v-bind:class="{fixTop:isFixDesc}">
                 <div class="col-50 ">
-                    <span id="goods_count">{{B.pre_count}}</span>
+                    <span id="goods_count">{{gift.pre_count}}</span>
                 </div>
                 <div class="col-50 ">
-                    <a v-if="!isGet" href="javascript:void(0)" v-on:click="pay(B.id)" class="btn-org">立即兑换</a>
+                    <a v-if="!isGet" href="javascript:void(0)" v-on:click="pay(gift.id)" class="btn-org">立即兑换</a>
                     <div v-if="isGet" class="btn-gray">已兑换</div>
                 </div>
             </div>
             <div class="main" id="main">
-                <div v-html="B.content"></div>
+                <div v-html="gift.content"></div>
             </div>
             <div class="row no-gutter">
                 <div class="col-100" style="background-color: #ffffff">
@@ -32,8 +31,8 @@
                         <div class="declare">
                             <p>重要说明</p>
                             <div class="declare_cont" id="declare">
-                                底部说明
-                            </div>
+                                <div>商品兑换流程请仔细参照商品详情页的“兑换流程”、“注意事项”与“使用时间”，除商品本身不能正常兑换外，商品一经兑换，一律不退还积分。（如商品过期、兑换流程操作失误、仅限新用户兑换）</div>
+                                <div>活动由提供，与设备生产商Apple Inc.公司无关</div></div>
                         </div>
                     </div>
                 </div>
@@ -49,7 +48,7 @@
     module.exports = {
         data: function(){
             return {
-                B : {
+                gift : {
                     id:"11073",
                     name:"能量堡垒钙维D片",
                     merchant_name:"乾乾",
@@ -84,8 +83,15 @@
         },
         methods:{
             pay:function(){
+                var ctx = this
+                $.confirm('确定兑换吗?', function () {
+                    //    购买逻辑
+                    ctx.isGet = true;
+                    $.alert('兑换成功');
+                });
             },
             _judgeFixTop:function(ele){
+//                在此处可以添加 滚动监测
             }
         }
     }

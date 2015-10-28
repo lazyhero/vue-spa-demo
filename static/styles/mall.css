@@ -3,7 +3,7 @@ img {
 }
 .card_my {
   /*height:4rem;*/
-  background-color:#e95377;
+  background-color:#515CE9;
 }
 .card_my .card{
   margin: 0px!important;
@@ -34,7 +34,7 @@ img {
   background-color: #ccc;
 }
 .state_org {
-  background-color: #d94b73;
+  background-color: #515CE9;
 }
 .state {
   display: inline-block;
@@ -67,7 +67,7 @@ img {
   top: 1px;
 }
 .list-item__info p:nth-child(3) {
-  color: #d94b73;
+  color: #515CE9;
   font-size: .6rem;
 }
 .list-item__info p:nth-child(2) {
@@ -109,9 +109,9 @@ img {
   height: 80px;
   display: inline-block;
   border-radius: 51px;
-  border: 1px solid #d94b73;
+  border: 1px solid #515CE9;
   background-clip: padding-box;
-  background-color: #d94b73;
+  background-color: #515CE9;
   color: #fff;
   position: relative;
   -webkit-animation: bounceIn .5s .1s ease both;
@@ -286,7 +286,7 @@ img {
 .pre_count {
   text-align: right;
   line-height: 56px;
-  color: #d94b73;
+  color: #515CE9;
   /*font-size: 1.4rem*/
 }
 
@@ -301,7 +301,7 @@ img {
   height: 41px;
   line-height: 41px;
   border-radius: 5px;
-  background-color: #d94b73;
+  background-color: #515CE9;
   color: #fff;
   font-size: 1.6rem;
   font-weight: 600;
@@ -333,6 +333,9 @@ img {
 
 .foo_opacity {
   background-color: #fff
+}
+.my-menu-1{
+  margin:0px!important;
 }
 .logo-line{
 
@@ -378,7 +381,7 @@ img {
 }
 /*红色-未完成*/
 .task_unfin,.default_flag {
-  background-color: #d94b73;
+  background-color: #515CE9;
 }
 
 /*绿色-完成*/
@@ -389,6 +392,18 @@ img {
 /*蓝色-可领取*/
 .task_can {
   background-color: #688fd9;
+}
+#my-coupon .card-content-inner {
+  padding: 0.2rem 0 0.3rem 0.8rem !important;
+}
+#my-coupon .card-content-inner p {
+  margin:0px !important;
+}
+#my-address .content-block-title {
+  margin: 0.75rem 0.75rem .5rem!important;
+}
+#my-change .list-block .item-text {
+  height: auto!important;
 }
 #gift-detail .content {
   background-color: #fff!important;
@@ -429,7 +444,7 @@ img {
   background: url(http://static.xiaojukeji.com/activity/img-mall/detail_count.png) right 28px no-repeat;
   background-size: 8px 9.5px;
   float: left;
-  color: #d94b73;
+  color: #515CE9;
   margin-left: 5%;
   margin-right: 4px;
   padding-right: 10px;
@@ -448,7 +463,7 @@ img {
   text-decoration: none;
   margin: 10px 6% 10px auto;
   -webkit-tap-highlight-color: rgba(0,0,0,.2);
-  background-color: #d94b73;
+  background-color: #515CE9;
   float: right
 }
 .btn-gray {
@@ -517,7 +532,7 @@ img {
   font-size:0.75rem;
 }
 .orange {
-  color: #d94b73;
+  color: #515CE9;
   font-weight: 400;
 }
 .expire {
@@ -610,7 +625,7 @@ img {
   font-size: 60px;
   font-weight: 600;
   position: absolute;
-  background-color: #e95377;
+  background-color: #515CE9;
   line-height: 80px;
   text-align: center;
   border-radius: 10px;
@@ -685,7 +700,7 @@ img {
   line-height: 56px;
 }
 .card_my .card-content {
-  background-color: #e95377;
+  background-color: #515CE9;
 }
 .rule {
   display: inline-block;

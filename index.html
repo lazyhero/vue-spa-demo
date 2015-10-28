@@ -3,19 +3,24 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>VUEJS-SPA-DEMO</title>
+    <title>VUEJS示例</title>
     <meta name="viewport" content="initial-scale=1, maximum-scale=1">
     <link rel="shortcut icon" href="/favicon.ico">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="stylesheet" href="//g.alicdn.com/sui-mobile/sm/0.5.0/css/sm.min.css">
+    <!-- 幻灯片插件用-->
+    <link rel="stylesheet" href="//g.alicdn.com/sui-mobile/sm/0.5.0/css/sm-extend.min.css">
+    <!-- 城市选择器用-->
+    <link rel="stylesheet" href="//g.alicdn.com/sui-mobile/sm/0.5.0/css/sm-city-picker.min.css">
     <link rel="stylesheet" href="static/styles/mall.css">
     <style>
+        /* 动画效果 暂时写这了 可以随你项目安排到合适位置*/
         .page-enter {
             z-index: 2002;
             -webkit-animation: pageFromRightToCenter 400ms forwards;
             -o-animation: pageFromRightToCenter 400ms forwards;
-            animation: pageFromRightToCenter 400ms forward
+            animation: pageFromRightToCenter 400ms forwards
         }
         .page-leave {
             z-index: 2002;
@@ -25,13 +30,14 @@
         }
     </style>
 </head>
-<body class="theme-pink">
+<body class="theme-yellow">
 <div id="app">
 </div>
-<div class="panel-overlay"></div>
+<!--sui库强依赖zepto 可以用其他替代-->
 <script src="//g.alicdn.com/sj/lib/zepto/zepto.js"></script>
 <script src="//g.alicdn.com/sui-mobile/sm/0.5.0/js/sm.js"></script>
 <script src="//g.alicdn.com/sui-mobile/sm/0.5.0/js/sm-extend.js"></script>
+<!--主程序-->
 <script src="dist/app.js"></script>
 </body>
 </html>

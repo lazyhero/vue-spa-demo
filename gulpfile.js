@@ -1,8 +1,6 @@
 var gulp = require('gulp')
 var webpack = require('gulp-webpack')
 var named = require('vinyl-named')
-
-
 var appList = ['app']
 
 
@@ -16,6 +14,7 @@ gulp.task('bundle', function() {
         .pipe(webpack(getConfig()))
         .pipe(gulp.dest('dist/'))
 })
+
 
 gulp.task('watch', function() {
     return gulp.src(mapFiles(appList, 'js'))
